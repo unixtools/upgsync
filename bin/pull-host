@@ -1,0 +1,59 @@
+#!/usr/bin/perl
+
+# Begin-Doc
+# Name: pull-host
+# Description: pulls host content
+# End-Doc
+
+use lib "/local/umrperl/libs";
+
+use Getopt::Long;
+
+my $host;
+my $debug;
+my $help;
+my $partial;
+my $res = GetOptions(
+    "host=s"    => \$host,
+    "debug+"    => \$debug,
+    "partial|p" => \$partial,
+    "help"      => \$help,
+);
+
+if ( !$res || $help || !$host ) {
+    print "Usage: $0 --host $host [--debug] [--help]\n";
+    exit(1);
+}
+
+#
+# First determine OS of target system as previously synced
+#
+
+#
+# Run the sync
+#
+my @partial = ("-W");
+if ($partial) {
+    @partial = ();
+}
+
+my $base = "/data/hosts/$host";
+if ( !-e $base ) {
+    mkdir( $base, 0700 );
+}
+if ( !-d $base ) {
+    die;
+}
+
+foreach my $dir ( "/etc", "/home", "/local", "/usr/share/authsrv", "/data", "/var/log" ) {
+    my $tname = $dir;
+    $tname =~ s|^/||go;
+    $tname =~ s|/$||go;
+    $tname =~ s|/|-|go;
+
+	print "Syncing $host:$dir\n";
+
+    my @cmd = ( "rsync", "-av", @partial, "--force", "--delete", "--progress", "root\@$host:/$dir/" => "$base/" );
+	print "+ ", join(" ", @cmd), "\n";
+	system(@cmd);
+}
