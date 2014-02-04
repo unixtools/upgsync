@@ -27,6 +27,24 @@ if ( !$res || $help || !$host ) {
 }
 
 #
+# Check to see if krb5 authenticated
+#
+my $saw_krb = 0;
+open( my $in, "-|" ) || exec("klist");
+while ( defined( my $line = <$in> ) ) {
+    chomp($line);
+    if ( $line =~ /Default principal: (.*\@.*)/io ) {
+        $saw_krb = $1;
+    }
+}
+close($in);
+if ( !$saw_krb ) {
+    print "Must kinit first in order to have ssh access to targets.\n";
+    exit;
+}
+print "Authenticated as: $saw_krb\n";
+
+#
 # First determine OS of target system as previously synced
 #
 
@@ -51,8 +69,7 @@ foreach my $dir ( "/etc", "/home", "/local", "/usr/share/authsrv", "/data", "/va
 
     print "Syncing $host:$dir\n";
 
-    my @cmd
-        = ( "rsync", "-av", @partial, "--force", "--delete", "--progress", "root\@$host:$dir/" => "$base/$tname/" );
+    my @cmd = ( "rsync", "-av", @partial, "--force", "--delete", "--progress", "root\@$host:$dir/" => "$base/$tname/" );
     print "+ ", join( " ", @cmd ), "\n";
     system(@cmd);
 }
