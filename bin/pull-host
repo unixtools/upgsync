@@ -8,20 +8,21 @@
 use lib "/local/umrperl/libs";
 
 use Getopt::Long;
+use File::Path;
 
-my $host;
 my $debug;
 my $help;
 my $partial;
 my $res = GetOptions(
-    "host=s"    => \$host,
     "debug+"    => \$debug,
     "partial|p" => \$partial,
-    "help"      => \$help,
+    "help|h"    => \$help,
 );
 
+my $host = shift @ARGV;
+
 if ( !$res || $help || !$host ) {
-    print "Usage: $0 --host $host [--debug] [--help]\n";
+    print "Usage: $0 host [--debug] [--partial] [--help]\n";
     exit(1);
 }
 
@@ -39,10 +40,7 @@ if ($partial) {
 
 my $base = "/data/hosts/$host";
 if ( !-e $base ) {
-    mkdir( $base, 0700 );
-}
-if ( !-d $base ) {
-    die;
+    mkpath( $base, 0, 0700 ) || die;
 }
 
 foreach my $dir ( "/etc", "/home", "/local", "/usr/share/authsrv", "/data", "/var/log" ) {
@@ -51,9 +49,10 @@ foreach my $dir ( "/etc", "/home", "/local", "/usr/share/authsrv", "/data", "/va
     $tname =~ s|/$||go;
     $tname =~ s|/|-|go;
 
-	print "Syncing $host:$dir\n";
+    print "Syncing $host:$dir\n";
 
-    my @cmd = ( "rsync", "-av", @partial, "--force", "--delete", "--progress", "root\@$host:/$dir/" => "$base/" );
-	print "+ ", join(" ", @cmd), "\n";
-	system(@cmd);
+    my @cmd
+        = ( "rsync", "-av", @partial, "--force", "--delete", "--progress", "root\@$host:$dir/" => "$base/$tname/" );
+    print "+ ", join( " ", @cmd ), "\n";
+    system(@cmd);
 }
