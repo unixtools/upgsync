@@ -26,6 +26,10 @@ if ( !$res || $help || !$host ) {
     exit(1);
 }
 
+if ( $host !~ /\.srv\.mst\.edu/ && gethostbyname( $host . ".srv.mst.edu" ) ) {
+    $host .= ".srv.mst.edu";
+}
+
 #
 # Check to see if krb5 authenticated
 #
@@ -72,4 +76,26 @@ foreach my $dir ( "/etc", "/home", "/local", "/usr/share/authsrv", "/data", "/va
     my @cmd = ( "rsync", "-av", @partial, "--force", "--delete", "--progress", "root\@$host:$dir/" => "$base/$tname/" );
     print "+ ", join( " ", @cmd ), "\n";
     system(@cmd);
+}
+
+
+88: "ps auxwww" => "ps-auxwww",
+    ^                          
+found String where operator expected
+
+Missing ';' above?
+my %cmds = (
+    "df -k"             => "df-k",
+    "vgdisplay -v"      => "vgdisplay",
+    "lvs"               => "lvs",
+    "cat /proc/cpuinfo" => "cpuinfo",
+    "cat /proc/meminfo" => "meminfo",
+    "ifconfig -a"       => "ifconfig" "ps auxwww" => "ps-auxwww",
+    "ps -ef"            => "ps-ef",
+);
+
+foreach my $cmd ( sort( keys(%cmds) ) ) {
+    my $fname = $cmds{$cmd};
+
+    system("ssh root\@$host $cmd > $base/info-$fname.txt");
 }
