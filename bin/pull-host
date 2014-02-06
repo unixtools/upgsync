@@ -85,7 +85,7 @@ foreach my $dref (@dirs) {
 
     print "Syncing $host:$dir\n";
 
-    my @cmd = ( "rsync", "-av", @partial, "--force", "--delete", "--progress" );
+    my @cmd = ( "rsync", "-avH", @partial, "--force", "--delete", "--progress" );
 
     if ( $dref->{exclude} ) {
         push( @cmd, "--delete-excluded" );
