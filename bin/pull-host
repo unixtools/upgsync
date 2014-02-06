@@ -78,20 +78,15 @@ foreach my $dir ( "/etc", "/home", "/local", "/usr/share/authsrv", "/data", "/va
     system(@cmd);
 }
 
-
-88: "ps auxwww" => "ps-auxwww",
-    ^                          
-found String where operator expected
-
-Missing ';' above?
 my %cmds = (
     "df -k"             => "df-k",
     "vgdisplay -v"      => "vgdisplay",
     "lvs"               => "lvs",
     "cat /proc/cpuinfo" => "cpuinfo",
     "cat /proc/meminfo" => "meminfo",
-    "ifconfig -a"       => "ifconfig" "ps auxwww" => "ps-auxwww",
+    "ifconfig -a"       => "ifconfig",
     "ps -ef"            => "ps-ef",
+    "ps auxwww"         => "ps-auxwww",
 );
 
 foreach my $cmd ( sort( keys(%cmds) ) ) {
