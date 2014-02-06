@@ -65,7 +65,19 @@ if ( !-e $base ) {
     mkpath( $base, 0, 0700 ) || die;
 }
 
-foreach my $dir ( "/etc", "/home", "/local", "/usr/share/authsrv", "/data", "/var/log", "/root" ) {
+my @dirs = (
+    { path => "/etc" },
+    { path => "/home", exclude => ["local/messages.debug"] },
+    { path => "/local", exclude => [ "logs/access_log.*", "logs/error_log.*" ] },
+    { path => "/usr/share/authsrv" },
+    { path => "/data" },
+    { path => "/var/log" },
+    { path => "/root", exclude => [".ccache"] },
+);
+
+foreach my $dref (@dirs) {
+    my $dir = $dref->{path};
+
     my $tname = $dir;
     $tname =~ s|^/||go;
     $tname =~ s|/$||go;
@@ -73,7 +85,16 @@ foreach my $dir ( "/etc", "/home", "/local", "/usr/share/authsrv", "/data", "/va
 
     print "Syncing $host:$dir\n";
 
-    my @cmd = ( "rsync", "-av", @partial, "--force", "--delete", "--progress", "root\@$host:$dir/" => "$base/$tname/" );
+    my @cmd = ( "rsync", "-av", @partial, "--force", "--delete", "--progress" );
+
+    if ( $dref->{exclude} ) {
+        push( @cmd, "--delete-excluded" );
+        foreach my $pat ( @{ $dref->{exclude} } ) {
+            push( @cmd, "--exclude" => $pat );
+        }
+    }
+
+    push( @cmd, "root\@$host:$dir/" => "$base/$tname/" );
     print "+ ", join( " ", @cmd ), "\n";
     system(@cmd);
 }
