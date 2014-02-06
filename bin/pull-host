@@ -65,7 +65,7 @@ if ( !-e $base ) {
     mkpath( $base, 0, 0700 ) || die;
 }
 
-foreach my $dir ( "/etc", "/home", "/local", "/usr/share/authsrv", "/data", "/var/log" ) {
+foreach my $dir ( "/etc", "/home", "/local", "/usr/share/authsrv", "/data", "/var/log", "/root" ) {
     my $tname = $dir;
     $tname =~ s|^/||go;
     $tname =~ s|/$||go;
