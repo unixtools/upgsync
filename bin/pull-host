@@ -53,17 +53,32 @@ print "Authenticated as: $saw_krb\n";
 #
 
 #
-# Run the sync
+# Set up base
 #
-my @partial = ("-W");
-if ($partial) {
-    @partial = ();
-}
-
 my $base = "/data/hosts/$host";
 if ( !-e $base ) {
     mkpath( $base, 0, 0700 ) || die;
 }
+if ( !-e "$base/upgsync-logs" ) {
+    mkpath( $base . "/upgsync-logs", 0, 0700 ) || die;
+}
+
+#
+# Rotate through previous sync logs
+#
+my $logbase  = "/data/hosts/$host/upgsync-logs/log";
+my $logcount = 5;
+unlink( $logbase . "." . $logcount );
+for my $i ( reverse( 1 .. $logcount - 1 ) ) {
+    if ( -e $log . "." . $i ) {
+        my $nextlog = $logbase . "." . ( $i + 1 );
+        rename( $logbase . "." . $i, $nextlog );
+    }
+}
+rename( $logbase, $logbase . ".1" );
+
+open( STDOUT, "|tee $logbase" );
+open( STDERR, ">&STDOUT" );
 
 my @dirs = (
     { path => "/etc" },
@@ -72,9 +87,18 @@ my @dirs = (
     { path => "/usr/share/authsrv" },
     { path => "/data" },
     { path => "/var/log" },
+    { path => "/var/spool/cron" },
     { path => "/root", exclude => [".ccache"] },
 );
 
+my @partial = ("-W");
+if ($partial) {
+    @partial = ();
+}
+
+#
+# Run the sync
+#
 foreach my $dref (@dirs) {
     my $dir = $dref->{path};
 
@@ -83,7 +107,22 @@ foreach my $dref (@dirs) {
     $tname =~ s|/$||go;
     $tname =~ s|/|-|go;
 
+    open( my $in, "-|" ) || exec("ssh -l root $host ls -al $dir 2>&1");
+    my $out = join( "", <$in> );
+    close($in);
+
+    print "\n";
+
+    if ( $out =~ /No such file or directory/m ) {
+        print "-" x 70, "\n";
+        print "Skipping $host:$dir - does not exist on source.\n";
+        print "-" x 70, "\n";
+        next;
+    }
+
+    print "-" x 70, "\n";
     print "Syncing $host:$dir\n";
+    print "-" x 70, "\n";
 
     my @cmd = ( "rsync", "-avH", @partial, "--force", "--delete", "--progress" );
 
