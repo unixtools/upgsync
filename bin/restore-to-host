@@ -1,0 +1,79 @@
+#!/usr/bin/perl
+
+# Begin-Doc
+# Name: restore-to-host
+# Description: restores host content
+# End-Doc
+
+use lib "/local/umrperl/libs";
+
+use Getopt::Long;
+use File::Path;
+
+my $debug;
+my $help;
+my $partial;
+my $force;
+my $res = GetOptions(
+    "debug+"    => \$debug,
+    "force+"    => \$force,
+    "partial|p" => \$partial,
+    "help|h"    => \$help,
+);
+
+my $host = shift @ARGV;
+
+if ( !$res || $help || !$host ) {
+    print "Usage: $0 host [--debug] [--partial] [--help]\n";
+    exit(1);
+}
+
+if ( $host !~ /\.srv\.mst\.edu/ && gethostbyname( $host . ".srv.mst.edu" ) ) {
+    $host .= ".srv.mst.edu";
+}
+
+#
+# Check to see if krb5 authenticated
+#
+my $saw_krb = 0;
+open( my $in, "-|" ) || exec("klist");
+while ( defined( my $line = <$in> ) ) {
+    chomp($line);
+    if ( $line =~ /Default principal: (.*\@.*)/io ) {
+        $saw_krb = $1;
+    }
+}
+close($in);
+if ( !$saw_krb ) {
+    print "Must kinit first in order to have ssh access to targets.\n";
+    exit;
+}
+print "Authenticated as: $saw_krb\n";
+
+#
+# Make sure, this is destructive
+#
+$| = 1;
+if ( !$force ) {
+    print "Overwrite contents of $host? Are you sure (yes/no)? ";
+    chomp( my $ans = <STDIN> );
+    if ( lc($ans) ne "yes" ) {
+        print "Exiting!\n";
+        exit(1);
+    }
+}
+
+#
+# First determine OS of target system as previously synced
+#
+
+sub mysystem {
+    my @cmd = @_;
+    print "+ ", join( " ", @cmd ), "\n";
+    system(@cmd);
+}
+
+my $base = "/data/hosts/$host";
+my @rsync = ( "rsync", "-avW", "--force", "--delete", "--progress" );
+
+&mysystem( @rsync, "$base/local/", "root\@$host:/local/" );

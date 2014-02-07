@@ -1,0 +1,18 @@
+
+restore to host
+
+svn upgrade /local/apache
+svn upgrade /local/umrperl
+svn upgrade /local/mysql
+if [ -e /local/apache ]; then
+/local/apache/setup-local-dirs
+fi
+
+copy in ssh host keys
+service sshd restart
+
+ not sure if this is needed:
+ssh -l root rdist-p1 /local/rdist/bin/manual-rdist os-updates $host
+
+
+ssh -l root rdist-p1 /local/rdist/bin/manual-rdist root-environment $host
