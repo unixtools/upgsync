@@ -80,3 +80,51 @@ my $base = "/data/hosts/$host";
 my @rsync = ( "rsync", "-avW", "--force", "--delete", "--progress" );
 
 &mysystem( @rsync, "$base/local/", "root\@$host:/local/" );
+
+&mysystem( @rsync, "$base/usr-share-authsrv/", "root\@$host:/usr/share/authsrv/" );
+
+&mysystem( @rsync, "--exclude=root", "$base/var-spool-cron/", "root\@$host:/var/spool/cron/" );
+
+# Check for tftp
+open( my $in, "$base/etc/xinetd.d/tftp" );
+my $data = join( "", <$in> );
+close($in);
+
+if ( $data =~ /^\s*disable\s*=\s*no/gmo ) {
+    print "Found tftp, copying.\n";
+    &mysystem( "scp", "-p", "$base/etc/xinetd.d/tftp", "root\@$host:/etc/xinetd.d/" );
+    &mysystem( "ssh", "root\@$host", "service", "xinetd", "restart" );
+}
+
+# Copy rc-start and rc-stop
+&mysystem(
+    @rsync,
+    "--exclude=rc.000.kernel-config",
+    "$base/home/local/adm/rc-start/",
+    "root\@$host:/home/local/adm/rc-start/"
+);
+&mysystem( @rsync, "$base/home/local/adm/rc-start/", "root\@$host:/home/local/adm/rc-start/" );
+
+# If we had apache, update the setup
+foreach my $dir ( "/local/apache", "/local/weblogs", "/local/umrperl", "/local/mysql" ) {
+    if ( -e "$base$dir" ) {
+        &mysystem( "ssh", "root\@$host", "svn", "upgrade", $dir );
+    }
+}
+
+# If we had apache, update the setup
+if ( -e "$base/local/apache" ) {
+    &mysystem( "ssh", "root\@$host", "/local/apache/setup-local-dirs" );
+}
+
+# If we had mysql, update the setup
+if ( -e "$base/local/mysql" ) {
+    &mysystem( "ssh", "root\@$host", "/local/mysql/setup-local-dirs" );
+    &mysystem( "ssh", "root\@$host", "/local/mysql/run-upgrade" );
+}
+
+# If we had jdk, update the setup
+if ( -e "$base/local/jdk" ) {
+    &mysystem( "ssh", "root\@$host", "/local/jdk/setup-local-dirs", "7-64" );
+}
+
