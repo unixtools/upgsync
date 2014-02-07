@@ -96,6 +96,11 @@ if ( $data =~ /^\s*disable\s*=\s*no/gmo ) {
     &mysystem( "ssh", "root\@$host", "service", "xinetd", "restart" );
 }
 
+# If we have a bonding config
+if ( -e "$base/etc/modprobe.d/bonding.conf" ) {
+    &mysystem( "scp", "-p", "$base/etc/modprobe.d/bonding.conf", "root\@$host:/etc/modprobe.d/" );
+}
+
 # Copy rc-start and rc-stop
 &mysystem(
     @rsync,
@@ -126,5 +131,11 @@ if ( -e "$base/local/mysql" ) {
 # If we had jdk, update the setup
 if ( -e "$base/local/jdk" ) {
     &mysystem( "ssh", "root\@$host", "/local/jdk/setup-local-dirs", "7-64" );
+}
+
+# If we have keepalived, update
+if ( -e "$base/etc/keepalived/keepalived.conf" ) {
+    &mysystem( "scp", "$base/etc/keepalived/keepalived.conf", "root\@$host:/etc/keepalived/keepalived.conf" );
+    &mysystem( "ssh", "root\@$host", "systemctl", "enable", "keepalived.service" );
 }
 
