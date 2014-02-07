@@ -5,6 +5,7 @@
 # Description: restores host content
 # End-Doc
 
+use strict;
 use lib "/local/umrperl/libs";
 
 use Getopt::Long;
@@ -31,6 +32,8 @@ if ( !$res || $help || !$host ) {
 if ( $host !~ /\.srv\.mst\.edu/ && gethostbyname( $host . ".srv.mst.edu" ) ) {
     $host .= ".srv.mst.edu";
 }
+
+unlink("/root/.ssh/known_hosts");
 
 #
 # Check to see if krb5 authenticated
