@@ -139,3 +139,6 @@ if ( -e "$base/etc/keepalived/keepalived.conf" ) {
     &mysystem( "ssh", "root\@$host", "systemctl", "enable", "keepalived.service" );
 }
 
+# SSH host keys
+my @files = glob("$base/etc/ssh/*key*");
+&mysystem( "scp", @files, "root\@$host:/etc/ssh/" );
