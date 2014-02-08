@@ -52,10 +52,6 @@ if ( !$saw_krb ) {
 print "Authenticated as: $saw_krb\n";
 
 #
-# First determine OS of target system as previously synced
-#
-
-#
 # Set up base
 #
 my $base = "/data/hosts/$host";
@@ -65,6 +61,30 @@ if ( !-e $base ) {
 if ( !-e "$base/upgsync-logs" ) {
     mkpath( $base . "/upgsync-logs", 0, 0700 ) || die;
 }
+
+#
+# First determine OS of target system as previously synced
+#
+open( my $in, "-|" ) || exec("ssh root\@$host uname -a");
+chomp( my $uname = <$in> );
+close($in);
+
+if ( -e "$base/info-uname-a.txt" ) {
+    open( my $in, "$base/info-uname-a.txt" );
+    chomp( my $old_uname = <$in> );
+    close($in);
+
+    if ( $uname ne $old_uname ) {
+        print "\n\n";
+        print "Host OS Mismatched, will not proceed:\n\n";
+        print "  Old: $old_uname\n";
+        print "  New: $uname\n\n";
+        print "If resync is intentional:\n\n    rm -f $base/info-uname-a.txt\n\n";
+        exit(1);
+    }
+}
+
+#exit;
 
 #
 # Rotate through previous sync logs
@@ -142,6 +162,7 @@ foreach my $dref (@dirs) {
 }
 
 my %cmds = (
+    "uname -a"          => "uname-a",
     "df -k"             => "df-k",
     "vgdisplay -v"      => "vgdisplay",
     "lvs"               => "lvs",
