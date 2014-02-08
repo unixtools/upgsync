@@ -58,6 +58,10 @@ print "Authenticated as: $saw_krb\n";
 #
 $| = 1;
 if ( !$force ) {
+    print "Before proceeding with this, be sure that you have already created\n";
+    print "and mounted any /local or /data filesystems, and that you have\n";
+    print "enlarged root fs as needed.\n\n";
+
     print "Overwrite contents of $host? Are you sure (yes/no)? ";
     chomp( my $ans = <STDIN> );
     if ( lc($ans) ne "yes" ) {
@@ -80,6 +84,8 @@ my $base = "/data/hosts/$host";
 my @rsync = ( "rsync", "-avW", "--force", "--delete", "--progress" );
 
 &mysystem( @rsync, "$base/local/", "root\@$host:/local/" );
+
+&mysystem( @rsync, "$base/data/", "root\@$host:/data/" );
 
 &mysystem( @rsync, "$base/usr-share-authsrv/", "root\@$host:/usr/share/authsrv/" );
 
