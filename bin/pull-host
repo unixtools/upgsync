@@ -73,7 +73,7 @@ my $logbase  = "/data/hosts/$host/upgsync-logs/log";
 my $logcount = 5;
 unlink( $logbase . "." . $logcount );
 for my $i ( reverse( 1 .. $logcount - 1 ) ) {
-    if ( -e $log . "." . $i ) {
+    if ( -e $logbase . "." . $i ) {
         my $nextlog = $logbase . "." . ( $i + 1 );
         rename( $logbase . "." . $i, $nextlog );
     }

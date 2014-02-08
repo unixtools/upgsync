@@ -139,6 +139,38 @@ if ( -e "$base/etc/keepalived/keepalived.conf" ) {
     &mysystem( "ssh", "root\@$host", "systemctl", "enable", "keepalived.service" );
 }
 
+# Check if any autofs usage
+open( my $in, "$base/etc/auto.master" );
+my $data = join( "", <$in> );
+close($in);
+
+if ( $data =~ m|^/auto| ) {
+    print "Found autofs usage, copying auto.master and auto.map, enabling nfs client.\n";
+    &mysystem( "scp", "-p", "$base/etc/auto.master", "root\@$host:/etc/" );
+    &mysystem( "scp", "-p", "$base/etc/auto.map",    "root\@$host:/etc/" );
+
+    foreach my $svc ( "rpcbind", "nfs-idmap", "nfs-lock", "autofs" ) {
+        &mysystem( "ssh", "root\@$host", "systemctl", "enable", "$svc.service" );
+        &mysystem( "ssh", "root\@$host", "systemctl", "start",  "$svc.service" );
+    }
+}
+
+# Check if any exports
+open( my $in, "$base/etc/exports" );
+my $data = join( "", <$in> );
+close($in);
+
+if ( $data =~ m|^/| ) {
+    print "Found exports, copying and enabling nfs server.\n";
+    &mysystem( "scp", "-p", "$base/etc/exports", "root\@$host:/etc/" );
+
+    foreach my $svc ( "rpcbind", "nfs-secure-server" ) {
+        &mysystem( "ssh", "root\@$host", "systemctl", "enable", "$svc.service" );
+        &mysystem( "ssh", "root\@$host", "systemctl", "start",  "$svc.service" );
+    }
+}
+
 # SSH host keys
+unlink("/root/.ssh/known_hosts");
 my @files = glob("$base/etc/ssh/*key*");
 &mysystem( "scp", @files, "root\@$host:/etc/ssh/" );
