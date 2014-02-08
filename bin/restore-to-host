@@ -160,6 +160,7 @@ if ( -e "$base/local/jdk" ) {
 # If we have keepalived, update
 if ( -e "$base/etc/keepalived/keepalived.conf" ) {
     print "Restoring keepalived.\n";
+    &mysystem( "ssh", "root\@$host", "yum", "-y", "install", "keepalived" );
     &mysystem( "scp", "$base/etc/keepalived/keepalived.conf", "root\@$host:/etc/keepalived/keepalived.conf" );
     &mysystem( "ssh", "root\@$host", "systemctl", "enable", "keepalived.service" );
 }
@@ -197,8 +198,13 @@ if ( $data =~ m|^/| ) {
 
 # If we had mysql, update the setup
 if ( -e "$base/local/mysql" ) {
-    print "Setting up mysql.\n";
-    &mysystem( "ssh", "root\@$host", "/local/mysql/setup-local-dirs" );
-    &mysystem( "ssh", "root\@$host", "/local/mysql/run-upgrade" );
+    if ( -e "$base/local/mysql/cluster" ) {
+        print "MySQL is a cluster deployment, not auto-upgrading, run setup and upgrade manually.\n";
+    }
+    else {
+        print "Setting up mysql.\n";
+        &mysystem( "ssh", "root\@$host", "/local/mysql/setup-local-dirs" );
+        &mysystem( "ssh", "root\@$host", "/local/mysql/run-upgrade" );
+    }
 }
 
