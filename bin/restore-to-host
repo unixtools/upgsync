@@ -71,6 +71,23 @@ if ( !$force ) {
 }
 
 #
+# Rotate through previous sync logs
+#
+my $logbase  = "/data/hosts/$host/upgsync-logs/restore";
+my $logcount = 5;
+unlink( $logbase . "." . $logcount );
+for my $i ( reverse( 1 .. $logcount - 1 ) ) {
+    if ( -e $logbase . "." . $i ) {
+        my $nextlog = $logbase . "." . ( $i + 1 );
+        rename( $logbase . "." . $i, $nextlog );
+    }
+}
+rename( $logbase, $logbase . ".1" );
+
+open( STDOUT, "|tee $logbase" );
+open( STDERR, ">&STDOUT" );
+
+#
 # First determine OS of target system as previously synced
 #
 
@@ -83,7 +100,12 @@ sub mysystem {
 my $base = "/data/hosts/$host";
 my @rsync = ( "rsync", "-avW", "--force", "--delete", "--progress" );
 
+# SSH host keys
+my @files = glob("$base/etc/ssh/*key*");
+&mysystem( "scp",  @files,         "root\@$host:/etc/ssh/" );
 &mysystem( @rsync, "$base/local/", "root\@$host:/local/" );
+&mysystem( "ssh", "root\@$host", "service", "sshd", "restart" );
+unlink("/root/.ssh/known_hosts");
 
 &mysystem( @rsync, "$base/data/", "root\@$host:/data/" );
 
@@ -125,22 +147,19 @@ foreach my $dir ( "/local/apache", "/local/weblogs", "/local/umrperl", "/local/m
 
 # If we had apache, update the setup
 if ( -e "$base/local/apache" ) {
+    print "Setting up apache.\n";
     &mysystem( "ssh", "root\@$host", "/local/apache/setup-local-dirs" );
-}
-
-# If we had mysql, update the setup
-if ( -e "$base/local/mysql" ) {
-    &mysystem( "ssh", "root\@$host", "/local/mysql/setup-local-dirs" );
-    &mysystem( "ssh", "root\@$host", "/local/mysql/run-upgrade" );
 }
 
 # If we had jdk, update the setup
 if ( -e "$base/local/jdk" ) {
+    print "Setting up JDK.\n";
     &mysystem( "ssh", "root\@$host", "/local/jdk/setup-local-dirs", "7-64" );
 }
 
 # If we have keepalived, update
 if ( -e "$base/etc/keepalived/keepalived.conf" ) {
+    print "Restoring keepalived.\n";
     &mysystem( "scp", "$base/etc/keepalived/keepalived.conf", "root\@$host:/etc/keepalived/keepalived.conf" );
     &mysystem( "ssh", "root\@$host", "systemctl", "enable", "keepalived.service" );
 }
@@ -176,7 +195,10 @@ if ( $data =~ m|^/| ) {
     }
 }
 
-# SSH host keys
-unlink("/root/.ssh/known_hosts");
-my @files = glob("$base/etc/ssh/*key*");
-&mysystem( "scp", @files, "root\@$host:/etc/ssh/" );
+# If we had mysql, update the setup
+if ( -e "$base/local/mysql" ) {
+    print "Setting up mysql.\n";
+    &mysystem( "ssh", "root\@$host", "/local/mysql/setup-local-dirs" );
+    &mysystem( "ssh", "root\@$host", "/local/mysql/run-upgrade" );
+}
+
