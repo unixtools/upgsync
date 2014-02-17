@@ -209,7 +209,7 @@ if ( -e "$base/local/mysql" ) {
 }
 
 # Updating passwd config/cron/etc
-&mysystem("ssh", "root\@rdist", "/local/rdist/bin/manual-rdist", $host, "passwd-config", "cron-config", "kernel-config");
+&mysystem("ssh", "root\@rdist-p1", "/local/rdist/bin/manual-rdist", $host, "passwd-config", "cron-config", "kernel-config");
 
 # Cleanup local user dirs
 &mysystem("ssh", "root\@$host", "rmdir", "--ignore-fail-on-non-empty", "/local/*");
