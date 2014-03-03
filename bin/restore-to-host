@@ -107,7 +107,12 @@ my @files = glob("$base/etc/ssh/*key*");
 &mysystem( "ssh", "root\@$host", "service", "sshd", "restart" );
 unlink("/root/.ssh/known_hosts");
 
+sleep(2);
+
 &mysystem( @rsync, "$base/data/", "root\@$host:/data/" );
+
+&mysystem( @rsync, "$base/root/.ssh/", "root\@$host:/root/.ssh/" );
+&mysystem( @rsync, "$base/root/.my.cnf", "root\@$host:/root/.my.cnf" );
 
 &mysystem( @rsync, "$base/usr-share-authsrv/", "root\@$host:/usr/share/authsrv/" );
 
@@ -196,20 +201,20 @@ if ( $data =~ m|^/| ) {
     }
 }
 
+# Updating passwd config/cron/etc
+&mysystem("ssh", "root\@rdist-p1", "/local/rdist/bin/manual-rdist", $host, "passwd-config", "cron-config", "kernel-config");
+
+# Cleanup local user dirs
+&mysystem("ssh", "root\@$host", "rmdir", "--ignore-fail-on-non-empty", "/local/*");
+
 # If we had mysql, update the setup
 if ( -e "$base/local/mysql" ) {
     if ( -e "$base/local/mysql/cluster" ) {
         print "MySQL is a cluster deployment, not auto-upgrading, run setup and upgrade manually.\n";
     }
     else {
-        print "Setting up mysql.\n";
+        print "Setting up mysql, you will need to start mysql on the host or reboot manually.\n";
         &mysystem( "ssh", "root\@$host", "/local/mysql/setup-local-dirs" );
-        &mysystem( "ssh", "root\@$host", "/local/mysql/run-upgrade" );
     }
 }
 
-# Updating passwd config/cron/etc
-&mysystem("ssh", "root\@rdist-p1", "/local/rdist/bin/manual-rdist", $host, "passwd-config", "cron-config", "kernel-config");
-
-# Cleanup local user dirs
-&mysystem("ssh", "root\@$host", "rmdir", "--ignore-fail-on-non-empty", "/local/*");
