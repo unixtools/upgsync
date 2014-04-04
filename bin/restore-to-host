@@ -231,6 +231,7 @@ if ( -e "$base/local/mysql" ) {
     else {
         print "Setting up mysql, you will need to start mysql on the host or reboot manually.\n";
         &mysystem( "ssh", "root\@$host", "/local/mysql/setup-local-dirs" );
+        &mysystem( "ssh", "root\@$host", "/local/mysql/setup-local-dirs" );
     }
 }
 
