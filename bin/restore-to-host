@@ -186,6 +186,22 @@ if ( -e "$base/etc/sysconfig/network-scripts/ifcfg-eth2" ) {
     &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth2/ens256/go", "/etc/sysconfig/network-scripts/ifcfg-ens256");
 }
 
+# If we have eth3 config, massage and copy
+if ( -e "$base/etc/sysconfig/network-scripts/ifcfg-eth3" ) {
+    print "Restoring eth3.\n";
+    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/ifcfg-eth3", "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens161" );
+    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/eth3.route", "root\@$host:/etc/sysconfig/network-scripts/ens161.route" );
+    &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth3/ens161/go", "/etc/sysconfig/network-scripts/ifcfg-ens161");
+}
+
+# If we have eth4 config, massage and copy
+if ( -e "$base/etc/sysconfig/network-scripts/ifcfg-eth4" ) {
+    print "Restoring eth4.\n";
+    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/ifcfg-eth4", "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens193" );
+    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/eth4.route", "root\@$host:/etc/sysconfig/network-scripts/ens193.route" );
+    &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth4/ens193/go", "/etc/sysconfig/network-scripts/ifcfg-ens193");
+}
+
 # Check if any autofs usage
 open( my $in, "$base/etc/auto.master" );
 my $data = join( "", <$in> );
@@ -218,7 +234,7 @@ if ( $data =~ m|^/| ) {
 }
 
 # Updating passwd config/cron/etc
-&mysystem("ssh", "root\@rdist-p1", "/local/rdist/bin/manual-rdist", $host, "passwd-config", "cron-config", "kernel-config", "network-config");
+&mysystem("ssh", "root\@rdist-p1", "/local/rdist/bin/manual-rdist", $host, "passwd-config", "cron-config", "kernel-config", "network-config", "weblogs-tools");
 
 # Cleanup local user dirs
 &mysystem("ssh", "root\@$host", "rmdir", "--ignore-fail-on-non-empty", "/local/*");
