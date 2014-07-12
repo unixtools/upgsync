@@ -1,3 +1,16 @@
-See wiki doc:
+Example "in-place reinstall from network" for mst.edu servers:
 
-https://wiki.mst.edu/systems/fedora_upgrade_procedure
+cd /boot
+rsync -av fcinst::fedora-20/media/production/base/images/pxeboot/vmlinuz /boot/fc20-vmlinuz
+rsync -av fcinst::fedora-20/media/production/base/images/pxeboot/initrd.img /boot/fc20-initrd.img
+grubby --grub2 \
+	--add-kernel=/boot/fc20-vmlinuz \
+	--initrd=/boot/fc20-initrd.img \
+	--args="ks=http://fcinst.srv.mst.edu/cgi-bin/kickstart/fedora-20.pl cmdline nomodeset nogpt selinux=0 consoleblank=0" \
+    	--title="FC20 Reinstall" \
+	--make-default
+sync
+
+
+Procedure will obviously be different for any other deployed site, but same mechanism can be used if network install 
+is set up.
