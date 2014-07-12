@@ -109,6 +109,7 @@ my @dirs = (
     { path => "/local", exclude => [ "logs/access_log.*", "logs/error_log.*" ] },
     { path => "/usr/share/authsrv" },
     { path => "/data" },
+    { path => "/var", exclude => ["lib", "cache"] },
     { path => "/var/log" },
     { path => "/var/spool/cron" },
     { path => "/root", exclude => [".ccache"] },
