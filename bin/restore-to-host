@@ -29,8 +29,10 @@ if ( !$res || $help || !$host ) {
     exit(1);
 }
 
-if ( $host !~ /\.srv\.mst\.edu/ && gethostbyname( $host . ".srv.mst.edu" ) ) {
-    $host .= ".srv.mst.edu";
+my ($full) = gethostbyname($host);
+if ( $full && $full ne $host ) {
+    print "Overriding hostname with: $full\n";
+    $host = $full;
 }
 
 unlink("/root/.ssh/known_hosts");
@@ -38,20 +40,22 @@ unlink("/root/.ssh/known_hosts");
 #
 # Check to see if krb5 authenticated
 #
-my $saw_krb = 0;
-open( my $in, "-|" ) || exec("klist");
-while ( defined( my $line = <$in> ) ) {
-    chomp($line);
-    if ( $line =~ /Default principal: (.*\@.*)/io ) {
-        $saw_krb = $1;
+if ( !-e "/root/.ssh/id_dsa" && !-e "/root/.ssh/id_rsa" ) {
+    my $saw_krb = 0;
+    open( my $in, "-|" ) || exec("klist");
+    while ( defined( my $line = <$in> ) ) {
+        chomp($line);
+        if ( $line =~ /Default principal: (.*\@.*)/io ) {
+            $saw_krb = $1;
+        }
     }
+    close($in);
+    if ( !$saw_krb ) {
+        print "Must kinit first in order to have ssh access to targets.\n";
+        exit;
+    }
+    print "Authenticated as: $saw_krb\n";
 }
-close($in);
-if ( !$saw_krb ) {
-    print "Must kinit first in order to have ssh access to targets.\n";
-    exit;
-}
-print "Authenticated as: $saw_krb\n";
 
 #
 # Make sure, this is destructive
@@ -111,7 +115,7 @@ sleep(2);
 
 &mysystem( @rsync, "$base/data/", "root\@$host:/data/" );
 
-&mysystem( @rsync, "$base/root/.ssh/", "root\@$host:/root/.ssh/" );
+&mysystem( @rsync, "$base/root/.ssh/",   "root\@$host:/root/.ssh/" );
 &mysystem( @rsync, "$base/root/.my.cnf", "root\@$host:/root/.my.cnf" );
 
 &mysystem( @rsync, "$base/usr-share-authsrv/", "root\@$host:/usr/share/authsrv/" );
@@ -173,33 +177,69 @@ if ( -e "$base/etc/keepalived/keepalived.conf" ) {
 # If we have eth1 config, massage and copy
 if ( -e "$base/etc/sysconfig/network-scripts/ifcfg-eth1" ) {
     print "Restoring eth1.\n";
-    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/ifcfg-eth1", "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens224" );
-    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/eth1.route", "root\@$host:/etc/sysconfig/network-scripts/ens224.route" );
-    &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth1/ens224/go", "/etc/sysconfig/network-scripts/ifcfg-ens224");
+    &mysystem(
+        "scp",
+        "$base/etc/sysconfig/network-scripts/ifcfg-eth1",
+        "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens224"
+    );
+    &mysystem(
+        "scp",
+        "$base/etc/sysconfig/network-scripts/eth1.route",
+        "root\@$host:/etc/sysconfig/network-scripts/ens224.route"
+    );
+    &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth1/ens224/go",
+        "/etc/sysconfig/network-scripts/ifcfg-ens224" );
 }
 
 # If we have eth2 config, massage and copy
 if ( -e "$base/etc/sysconfig/network-scripts/ifcfg-eth2" ) {
     print "Restoring eth2.\n";
-    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/ifcfg-eth2", "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens256" );
-    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/eth2.route", "root\@$host:/etc/sysconfig/network-scripts/ens256.route" );
-    &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth2/ens256/go", "/etc/sysconfig/network-scripts/ifcfg-ens256");
+    &mysystem(
+        "scp",
+        "$base/etc/sysconfig/network-scripts/ifcfg-eth2",
+        "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens256"
+    );
+    &mysystem(
+        "scp",
+        "$base/etc/sysconfig/network-scripts/eth2.route",
+        "root\@$host:/etc/sysconfig/network-scripts/ens256.route"
+    );
+    &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth2/ens256/go",
+        "/etc/sysconfig/network-scripts/ifcfg-ens256" );
 }
 
 # If we have eth3 config, massage and copy
 if ( -e "$base/etc/sysconfig/network-scripts/ifcfg-eth3" ) {
     print "Restoring eth3.\n";
-    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/ifcfg-eth3", "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens161" );
-    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/eth3.route", "root\@$host:/etc/sysconfig/network-scripts/ens161.route" );
-    &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth3/ens161/go", "/etc/sysconfig/network-scripts/ifcfg-ens161");
+    &mysystem(
+        "scp",
+        "$base/etc/sysconfig/network-scripts/ifcfg-eth3",
+        "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens161"
+    );
+    &mysystem(
+        "scp",
+        "$base/etc/sysconfig/network-scripts/eth3.route",
+        "root\@$host:/etc/sysconfig/network-scripts/ens161.route"
+    );
+    &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth3/ens161/go",
+        "/etc/sysconfig/network-scripts/ifcfg-ens161" );
 }
 
 # If we have eth4 config, massage and copy
 if ( -e "$base/etc/sysconfig/network-scripts/ifcfg-eth4" ) {
     print "Restoring eth4.\n";
-    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/ifcfg-eth4", "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens193" );
-    &mysystem( "scp", "$base/etc/sysconfig/network-scripts/eth4.route", "root\@$host:/etc/sysconfig/network-scripts/ens193.route" );
-    &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth4/ens193/go", "/etc/sysconfig/network-scripts/ifcfg-ens193");
+    &mysystem(
+        "scp",
+        "$base/etc/sysconfig/network-scripts/ifcfg-eth4",
+        "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens193"
+    );
+    &mysystem(
+        "scp",
+        "$base/etc/sysconfig/network-scripts/eth4.route",
+        "root\@$host:/etc/sysconfig/network-scripts/ens193.route"
+    );
+    &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth4/ens193/go",
+        "/etc/sysconfig/network-scripts/ifcfg-ens193" );
 }
 
 # Check if any autofs usage
@@ -234,10 +274,14 @@ if ( $data =~ m|^/|sgmo ) {
 }
 
 # Updating passwd config/cron/etc
-&mysystem("ssh", "root\@rdist-p1", "/local/rdist/bin/manual-rdist", $host, "passwd-config", "cron-config", "kernel-config", "network-config", "weblogs-tools");
+&mysystem(
+    "ssh",           "root\@rdist-p1", "/local/rdist/bin/manual-rdist", $host,
+    "passwd-config", "cron-config",    "kernel-config",                 "network-config",
+    "weblogs-tools"
+);
 
 # Cleanup local user dirs
-&mysystem("ssh", "root\@$host", "rmdir", "--ignore-fail-on-non-empty", "/local/*");
+&mysystem( "ssh", "root\@$host", "rmdir", "--ignore-fail-on-non-empty", "/local/*" );
 
 # If we had mysql, update the setup
 if ( -e "$base/local/mysql" ) {
