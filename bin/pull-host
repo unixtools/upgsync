@@ -27,8 +27,10 @@ if ( !$res || $help || !$host ) {
     exit(1);
 }
 
-if ( $host !~ /\.srv\.mst\.edu/ && gethostbyname( $host . ".srv.mst.edu" ) ) {
-    $host .= ".srv.mst.edu";
+my ($full) = gethostbyname($host);
+if ( $full && $full ne $host ) {
+    print "Overriding hostname with: $full\n";
+    $host = $full;
 }
 
 unlink("/root/.ssh/known_hosts");
@@ -36,20 +38,22 @@ unlink("/root/.ssh/known_hosts");
 #
 # Check to see if krb5 authenticated
 #
-my $saw_krb = 0;
-open( my $in, "-|" ) || exec("klist");
-while ( defined( my $line = <$in> ) ) {
-    chomp($line);
-    if ( $line =~ /Default principal: (.*\@.*)/io ) {
-        $saw_krb = $1;
+if ( !-e "/root/.ssh/id_dsa" && !-e "/root/.ssh/id_rsa" ) {
+    my $saw_krb = 0;
+    open( my $in, "-|" ) || exec("klist");
+    while ( defined( my $line = <$in> ) ) {
+        chomp($line);
+        if ( $line =~ /Default principal: (.*\@.*)/io ) {
+            $saw_krb = $1;
+        }
     }
+    close($in);
+    if ( !$saw_krb ) {
+        print "Must kinit first in order to have ssh access to targets.\n";
+        exit;
+    }
+    print "Authenticated as: $saw_krb\n";
 }
-close($in);
-if ( !$saw_krb ) {
-    print "Must kinit first in order to have ssh access to targets.\n";
-    exit;
-}
-print "Authenticated as: $saw_krb\n";
 
 #
 # Set up base
