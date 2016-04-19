@@ -242,6 +242,11 @@ open( my $in, "$base/etc/auto.master" );
 my $data = join( "", <$in> );
 close($in);
 
+if ( -e "$base/etc/keepalived/keepalived.conf" ) {
+    &mysystem( "scp", "-p", "$base/etc/keepalived/keepalived.conf", "root\@$host:/etc/keepalived/" );
+    &mysystem( "ssh", "root\@$host", "update-rc.d", "keepalived", "enable" );
+}
+
 if ( $data =~ m|^/auto| ) {
     print "Found autofs usage, copying auto.master and auto.map, enabling nfs client.\n";
     &mysystem( "scp", "-p", "$base/etc/auto.master", "root\@$host:/etc/" );
