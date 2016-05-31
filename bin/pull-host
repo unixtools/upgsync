@@ -113,8 +113,8 @@ my @dirs = (
     { path => "/local", exclude => [ "logs/access_log.*", "logs/error_log.*" ] },
     { path => "/usr/share/authsrv" },
     { path => "/data" },
-    { path => "/var", exclude => ["lib", "cache"] },
-    { path => "/var/log" },
+    { path => "/var", exclude => ["lib", "cache", "log/journal"] },
+    { path => "/var/log", exclude => ["journal"] },
     { path => "/var/spool/cron" },
     { path => "/root", exclude => [".ccache"] },
 );

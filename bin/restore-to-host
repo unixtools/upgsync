@@ -113,14 +113,22 @@ unlink("/root/.ssh/known_hosts");
 
 sleep(2);
 
-&mysystem( @rsync, "$base/data/", "root\@$host:/data/" );
+if ( -d "$base/data" ) {
+    &mysystem( @rsync, "$base/data/", "root\@$host:/data/" );
+}
 
 &mysystem( @rsync, "$base/root/.ssh/",   "root\@$host:/root/.ssh/" );
 &mysystem( @rsync, "$base/root/.my.cnf", "root\@$host:/root/.my.cnf" );
 
 &mysystem( @rsync, "$base/usr-share-authsrv/", "root\@$host:/usr/share/authsrv/" );
 
-&mysystem( @rsync, "--exclude=root", "$base/var-spool-cron/", "root\@$host:/var/spool/cron/" );
+opendir(my $cron, "$base/var-spool-cron");
+while ( my $file = readdir($cron) )
+{
+	next if ( $file eq "." || $file eq ".." || $file eq "root" );
+	&mysystem( "scp", "-p", "$base/var-spool-cron/$file", "root\@$host:/var/spool/cron/crontabs/" );
+	&mysystem( "ssh", "root\@$host", "chown", "$file:crontab", "/var/spool/cron/crontabs/$file" );
+}
 
 # Check for tftp
 open( my $in, "$base/etc/xinetd.d/tftp" );
@@ -145,7 +153,7 @@ close($in);
     "$base/home/local/adm/rc-start/",
     "root\@$host:/home/local/adm/rc-start/"
 );
-&mysystem( @rsync, "$base/home/local/adm/rc-start/", "root\@$host:/home/local/adm/rc-start/" );
+&mysystem( @rsync, "$base/home/local/adm/rc-stop/", "root\@$host:/home/local/adm/rc-stop/" );
 
 # If we had apache, update the setup
 if ( -e "$base/local/apache" ) {
@@ -162,7 +170,7 @@ if ( -e "$base/local/jdk" ) {
 # If we have keepalived, update
 if ( -e "$base/etc/keepalived/keepalived.conf" ) {
     print "Restoring keepalived.\n";
-    &mysystem( "ssh", "root\@$host", "yum", "-y", "install", "keepalived" );
+    &mysystem( "ssh", "root\@$host", "apt-get", "-y", "install", "keepalived" );
     &mysystem( "scp", "$base/etc/keepalived/keepalived.conf", "root\@$host:/etc/keepalived/keepalived.conf" );
     &mysystem( "ssh", "root\@$host", "systemctl", "enable", "keepalived.service" );
 }
@@ -267,7 +275,7 @@ if ( $data =~ m|^/|sgmo ) {
     print "Found exports, copying and enabling nfs server.\n";
     &mysystem( "scp", "-p", "$base/etc/exports", "root\@$host:/etc/" );
 
-    foreach my $svc ( "rpcbind", "nfs-secure-server" ) {
+    foreach my $svc ( "rpcbind", "nfs-kernel-server" ) {
         &mysystem( "ssh", "root\@$host", "systemctl", "enable", "$svc.service" );
         &mysystem( "ssh", "root\@$host", "systemctl", "start",  "$svc.service" );
     }
@@ -275,7 +283,7 @@ if ( $data =~ m|^/|sgmo ) {
 
 # Updating passwd config/cron/etc
 &mysystem( "ssh", "root\@rdist-p1", "/local/rdist/bin/manual-rdist",
-    $host, "passwd-config", "cron-config", "kernel-config", "network-config", );
+    $host, "passwd-merge", "cron-config", "kernel-config", "network-config", );
 
 # Cleanup local user dirs
 &mysystem( "ssh", "root\@$host", "rmdir", "--ignore-fail-on-non-empty", "/local/*" );
