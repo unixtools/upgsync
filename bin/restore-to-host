@@ -102,7 +102,7 @@ sub mysystem {
 }
 
 my $base = "/data/hosts/$host";
-my @rsync = ( "rsync", "-avW", "--force", "--delete", "--progress" );
+my @rsync = ( "rsync", "-avHW", "--force", "--delete", "--progress" );
 
 # SSH host keys
 my @files = glob("$base/etc/ssh/*key*");
@@ -283,7 +283,7 @@ if ( $data =~ m|^/|sgmo ) {
 
 # Updating passwd config/cron/etc
 &mysystem( "ssh", "root\@rdist-p1", "/local/rdist/bin/manual-rdist",
-    $host, "passwd-merge", "cron-config", "kernel-config", "network-config", );
+    $host, "passwd-merge", "cron-config", "kernel-config", "network-config", "local-perl" );
 
 # Cleanup local user dirs
 &mysystem( "ssh", "root\@$host", "rmdir", "--ignore-fail-on-non-empty", "/local/*" );
