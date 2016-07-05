@@ -169,6 +169,7 @@ foreach my $dref (@dirs) {
 my %cmds = (
     "uname -a"          => "uname-a",
     "df -k"             => "df-k",
+    "df -i"             => "df-i",
     "vgdisplay -v"      => "vgdisplay",
     "lvs"               => "lvs",
     "cat /proc/cpuinfo" => "cpuinfo",
