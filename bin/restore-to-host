@@ -161,6 +161,12 @@ if ( -e "$base/local/apache" ) {
     &mysystem( "ssh", "root\@$host", "/local/apache/setup-local-dirs" );
 }
 
+# If we had memcache, update the setup
+if ( -e "$base/local/memcache" ) {
+    print "Setting up memcached.\n";
+    &mysystem( "ssh", "root\@$host", "/local/memcache/setup-local-dirs" );
+}
+
 # If we had jdk, update the setup
 if ( -e "$base/local/jdk" ) {
     print "Setting up JDK.\n";
