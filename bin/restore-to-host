@@ -6,7 +6,8 @@
 # End-Doc
 
 use strict;
-use lib "/local/umrperl/libs";
+use lib "/local/perllib/libs";
+use lib "/local/mstperl/libs";
 
 use Getopt::Long;
 use File::Path;
