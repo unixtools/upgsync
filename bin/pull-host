@@ -118,6 +118,7 @@ my @dirs = (
     { path => "/var/log", exclude => ["journal"] },
     { path => "/var/spool/cron" },
     { path => "/root", exclude => [".ccache"] },
+    { path => "/ora" },
 );
 
 my @partial = ("-W");
