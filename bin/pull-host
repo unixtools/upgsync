@@ -39,7 +39,7 @@ unlink("/root/.ssh/known_hosts");
 #
 # Check to see if ssh agent socket
 #
-if ( $ENV{SSH_AUTH_SOCK} ) {
+if ( ! $ENV{SSH_AUTH_SOCK} ) {
     die "Must have SSH agent socket.\n";
 }
 

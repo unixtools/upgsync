@@ -41,7 +41,7 @@ unlink("/root/.ssh/known_hosts");
 #
 # Check to see if ssh agent socket
 #
-if ( $ENV{SSH_AUTH_SOCK} ) {
+if ( ! $ENV{SSH_AUTH_SOCK} ) {
     die "Must have SSH agent socket.\n";
 }
 
@@ -110,11 +110,11 @@ if ( -d "$base/data" ) {
 
 &mysystem( @rsync, "$base/usr-share-authsrv/", "root\@$host:/usr/share/authsrv/" );
 
-opendir(my $cron, "$base/var-spool-cron");
+opendir(my $cron, "$base/var-spool-cron/crontabs");
 while ( my $file = readdir($cron) )
 {
 	next if ( $file eq "." || $file eq ".." || $file eq "root" );
-	&mysystem( "scp", "-p", "$base/var-spool-cron/$file", "root\@$host:/var/spool/cron/crontabs/" );
+	&mysystem( "scp", "-p", "$base/var-spool-cron/crontabs/$file", "root\@$host:/var/spool/cron/crontabs/" );
 	&mysystem( "ssh", "root\@$host", "chown", "$file:crontab", "/var/spool/cron/crontabs/$file" );
 }
 
@@ -208,7 +208,7 @@ if ( -e "$base/local/mysql" ) {
     else {
         print "Setting up mysql, you will need to start mysql on the host or reboot manually.\n";
         &mysystem( "ssh", "root\@$host", "/local/mysql/setup-local-dirs" );
-        &mysystem( "ssh", "root\@$host", "/local/mysql/setup-local-dirs" );
     }
+    &mysystem( "ssh", "root\@$host", "/local/mysql/setup-cron" );
 }
 
