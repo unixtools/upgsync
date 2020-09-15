@@ -39,23 +39,10 @@ if ( $full && $full ne $host ) {
 unlink("/root/.ssh/known_hosts");
 
 #
-# Check to see if krb5 authenticated
+# Check to see if ssh agent socket
 #
-if ( !-e "/root/.ssh/id_dsa" && !-e "/root/.ssh/id_rsa" ) {
-    my $saw_krb = 0;
-    open( my $in, "-|" ) || exec("klist");
-    while ( defined( my $line = <$in> ) ) {
-        chomp($line);
-        if ( $line =~ /Default principal: (.*\@.*)/io ) {
-            $saw_krb = $1;
-        }
-    }
-    close($in);
-    if ( !$saw_krb ) {
-        print "Must kinit first in order to have ssh access to targets.\n";
-        exit;
-    }
-    print "Authenticated as: $saw_krb\n";
+if ( $ENV{SSH_AUTH_SOCK} ) {
+    die "Must have SSH agent socket.\n";
 }
 
 #
@@ -131,22 +118,6 @@ while ( my $file = readdir($cron) )
 	&mysystem( "ssh", "root\@$host", "chown", "$file:crontab", "/var/spool/cron/crontabs/$file" );
 }
 
-# Check for tftp
-open( my $in, "$base/etc/xinetd.d/tftp" );
-my $data = join( "", <$in> );
-close($in);
-
-#if ( $data =~ /^\s*disable\s*=\s*no/gmo ) {
-#    print "Found tftp, copying.\n";
-#    &mysystem( "scp", "-p", "$base/etc/xinetd.d/tftp", "root\@$host:/etc/xinetd.d/" );
-#    &mysystem( "ssh", "root\@$host", "service", "xinetd", "restart" );
-#}
-
-# If we have a bonding config
-#if ( -e "$base/etc/modprobe.d/bonding.conf" ) {
-#    &mysystem( "scp", "-p", "$base/etc/modprobe.d/bonding.conf", "root\@$host:/etc/modprobe.d/" );
-#}
-
 # Copy rc-start and rc-stop
 &mysystem(
     @rsync,
@@ -183,74 +154,8 @@ if ( -e "$base/etc/keepalived/keepalived.conf" ) {
 }
 
 # If we have eth1 config, massage and copy
-if (0) {
-    if ( -e "$base/etc/sysconfig/network-scripts/ifcfg-eth1" ) {
-        print "Restoring eth1.\n";
-        &mysystem(
-            "scp",
-            "$base/etc/sysconfig/network-scripts/ifcfg-eth1",
-            "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens224"
-        );
-        &mysystem(
-            "scp",
-            "$base/etc/sysconfig/network-scripts/eth1.route",
-            "root\@$host:/etc/sysconfig/network-scripts/ens224.route"
-        );
-        &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth1/ens224/go",
-            "/etc/sysconfig/network-scripts/ifcfg-ens224" );
-    }
-
-    # If we have eth2 config, massage and copy
-    if ( -e "$base/etc/sysconfig/network-scripts/ifcfg-eth2" ) {
-        print "Restoring eth2.\n";
-        &mysystem(
-            "scp",
-            "$base/etc/sysconfig/network-scripts/ifcfg-eth2",
-            "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens256"
-        );
-        &mysystem(
-            "scp",
-            "$base/etc/sysconfig/network-scripts/eth2.route",
-            "root\@$host:/etc/sysconfig/network-scripts/ens256.route"
-        );
-        &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth2/ens256/go",
-            "/etc/sysconfig/network-scripts/ifcfg-ens256" );
-    }
-
-    # If we have eth3 config, massage and copy
-    if ( -e "$base/etc/sysconfig/network-scripts/ifcfg-eth3" ) {
-        print "Restoring eth3.\n";
-        &mysystem(
-            "scp",
-            "$base/etc/sysconfig/network-scripts/ifcfg-eth3",
-            "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens161"
-        );
-        &mysystem(
-            "scp",
-            "$base/etc/sysconfig/network-scripts/eth3.route",
-            "root\@$host:/etc/sysconfig/network-scripts/ens161.route"
-        );
-        &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth3/ens161/go",
-            "/etc/sysconfig/network-scripts/ifcfg-ens161" );
-    }
-
-    # If we have eth4 config, massage and copy
-    if ( -e "$base/etc/sysconfig/network-scripts/ifcfg-eth4" ) {
-        print "Restoring eth4.\n";
-        &mysystem(
-            "scp",
-            "$base/etc/sysconfig/network-scripts/ifcfg-eth4",
-            "root\@$host:/etc/sysconfig/network-scripts/ifcfg-ens193"
-        );
-        &mysystem(
-            "scp",
-            "$base/etc/sysconfig/network-scripts/eth4.route",
-            "root\@$host:/etc/sysconfig/network-scripts/ens193.route"
-        );
-        &mysystem( "ssh", "root\@$host", "perl", "-pi", "-e", "s/eth4/ens193/go",
-            "/etc/sysconfig/network-scripts/ifcfg-ens193" );
-    }
-}
+# Networking needs complete overhaul to translate to netplan on ub20
+print "**** NEED TO TRANSLATE ANY CUSTOM NETWORKING!!!\n";
 
 # Check if any autofs usage
 open( my $in, "$base/etc/auto.master" );

@@ -37,23 +37,10 @@ if ( $full && $full ne $host ) {
 unlink("/root/.ssh/known_hosts");
 
 #
-# Check to see if krb5 authenticated
+# Check to see if ssh agent socket
 #
-if ( !-e "/root/.ssh/id_dsa" && !-e "/root/.ssh/id_rsa" ) {
-    my $saw_krb = 0;
-    open( my $in, "-|" ) || exec("klist");
-    while ( defined( my $line = <$in> ) ) {
-        chomp($line);
-        if ( $line =~ /Default principal: (.*\@.*)/io ) {
-            $saw_krb = $1;
-        }
-    }
-    close($in);
-    if ( !$saw_krb ) {
-        print "Must kinit first in order to have ssh access to targets.\n";
-        exit;
-    }
-    print "Authenticated as: $saw_krb\n";
+if ( $ENV{SSH_AUTH_SOCK} ) {
+    die "Must have SSH agent socket.\n";
 }
 
 #
@@ -114,10 +101,10 @@ my @dirs = (
     { path => "/local", exclude => [ "logs/access_log.*", "logs/error_log.*" ] },
     { path => "/usr/share/authsrv" },
     { path => "/data" },
-    { path => "/var", exclude => ["lib", "cache", "log/journal"] },
+    { path => "/var", exclude => [ "lib", "cache", "log/journal" ] },
     { path => "/var/log", exclude => ["journal"] },
     { path => "/var/spool/cron" },
-    { path => "/root", exclude => [".ccache"] },
+    { path => "/root",    exclude => [".ccache"] },
     { path => "/ora" },
 );
 
