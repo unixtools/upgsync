@@ -41,7 +41,7 @@ unlink("/root/.ssh/known_hosts");
 #
 # Check to see if ssh agent socket
 #
-if ( ! $ENV{SSH_AUTH_SOCK} ) {
+if ( !$ENV{SSH_AUTH_SOCK} ) {
     die "Must have SSH agent socket.\n";
 }
 
@@ -89,7 +89,7 @@ sub mysystem {
     system(@cmd);
 }
 
-my $base = "/data/hosts/$host";
+my $base  = "/data/hosts/$host";
 my @rsync = ( "rsync", "-avHW", "--force", "--delete", "--progress" );
 
 # SSH host keys
@@ -110,12 +110,11 @@ if ( -d "$base/data" ) {
 
 &mysystem( @rsync, "$base/usr-share-authsrv/", "root\@$host:/usr/share/authsrv/" );
 
-opendir(my $cron, "$base/var-spool-cron/crontabs");
-while ( my $file = readdir($cron) )
-{
-	next if ( $file eq "." || $file eq ".." || $file eq "root" );
-	&mysystem( "scp", "-p", "$base/var-spool-cron/crontabs/$file", "root\@$host:/var/spool/cron/crontabs/" );
-	&mysystem( "ssh", "root\@$host", "chown", "$file:crontab", "/var/spool/cron/crontabs/$file" );
+opendir( my $cron, "$base/var-spool-cron/crontabs" );
+while ( my $file = readdir($cron) ) {
+    next if ( $file eq "." || $file eq ".." || $file eq "root" );
+    &mysystem( "scp", "-p", "$base/var-spool-cron/crontabs/$file", "root\@$host:/var/spool/cron/crontabs/" );
+    &mysystem( "ssh", "root\@$host", "chown", "$file:crontab", "/var/spool/cron/crontabs/$file" );
 }
 
 # Copy rc-start and rc-stop
@@ -194,8 +193,11 @@ if ( $data =~ m|^/|sgmo ) {
 }
 
 # Updating passwd config/cron/etc
-&mysystem( "ssh", "root\@rdist-p1", "/local/rdist/bin/manual-rdist",
-    $host, "passwd-merge", "cron-config", "kernel-config", "network-config", "local-perl" );
+&mysystem(
+    "ssh",          "root\@rdist-p1", "/local/rdist/bin/manual-rdist", $host,
+    "passwd-merge", "cron-config",    "kernel-config",                 "network-config",
+    "local-perl"
+);
 
 # Cleanup local user dirs
 &mysystem( "ssh", "root\@$host", "rmdir", "--ignore-fail-on-non-empty", "/local/*" );
@@ -212,3 +214,101 @@ if ( -e "$base/local/mysql" ) {
     &mysystem( "ssh", "root\@$host", "/local/mysql/setup-cron" );
 }
 
+#
+# Determine default interface, hardcoding to ens192 for now
+#
+my %ignore_iface;
+$ignore_iface{lo} = 1;
+
+open( my $in, "ssh root\@$host ip route show default|" );
+while ( defined( my $line = <$in> ) ) {
+    if ( $line =~ /.*dev\s+(.*?)\s+/ ) {
+        $ignore_iface{$1} = 1;
+    }
+}
+close($in);
+
+open( my $in, "</data/hosts/$host/etc/network/interfaces" );
+my $cur = undef;
+while ( defined( my $line = <$in> ) ) {
+    if ( $line =~ /^iface\s+(.*?)\s+inet\s+(.*)\s*$/ ) {
+        if ($cur) {
+            &dump_plan($cur);
+        }
+        $cur          = undef;
+        $cur->{iface} = $1;
+        $cur->{mode}  = $2;
+    }
+    elsif ( $line =~ /^\s*address\s+([0-9\.]+?)\s*$/o ) {
+        $cur->{addr} = $1;
+    }
+    elsif ( $line =~ /^\s*netmask\s+([0-9\.]+?)\s*$/o ) {
+        my $mask = $1;
+        my $bits = 32;
+        if (0) { }
+        elsif ( $mask eq "255.255.255.224" ) { $bits = 30; }
+        elsif ( $mask eq "255.255.255.240" ) { $bits = 28; }
+        elsif ( $mask eq "255.255.255.224" ) { $bits = 27; }
+        elsif ( $mask eq "255.255.255.192" ) { $bits = 26; }
+        elsif ( $mask eq "255.255.255.128" ) { $bits = 25; }
+        elsif ( $mask eq "255.255.255.0" )   { $bits = 24; }
+        elsif ( $mask eq "255.255.254.0" )   { $bits = 23; }
+        elsif ( $mask eq "255.255.252.0" )   { $bits = 22; }
+        elsif ( $mask eq "255.255.248.0" )   { $bits = 21; }
+        $cur->{bits} = $bits;
+    }
+    elsif ( $line =~ m|post-up.*route.*\s+([0-9\.]+/[0-9\.]+) via ([0-9\.]+)\s*$|o ) {
+        push( @{ $cur->{routes} }, { network => $1, gw => $2 } );
+    }
+}
+if ($cur) {
+    &dump_plan($cur);
+    $cur = undef;
+}
+
+sub dump_plan {
+    my $cur   = shift;
+    my $iface = $cur->{iface};
+    if ( $ignore_iface{$iface} ) {
+        print "Ignoring config for ($iface).\n";
+        return;
+    }
+
+    my $fname   = "/etc/netplan/99-extra-${iface}.yaml";
+    my $tmpfile = "/tmp/np-$$-${host}-${iface}.yaml";
+
+    print "\nGenerating for $fname in $tmpfile\n";
+    open( my $out, ">$tmpfile" );
+    print $out "network:\n";
+    print $out "  version: 2\n";
+    print $out "  renderer: networkd\n";
+    print $out "  ethernets:\n";
+    print $out "    $iface:\n";
+
+    if ( $cur->{mode} eq "dhcp" ) {
+        print $out "      dhcp4: yes\n";
+    }
+    else {
+        print $out "      dhcp4: no\n";
+    }
+    if ( $cur->{addr} ) {
+        print $out "      addresses: [", $cur->{addr}, "/", $cur->{bits}, "]\n";
+    }
+    if ( $cur->{routes} ) {
+        print $out "      routes:\n";
+        foreach my $rr ( @{ $cur->{routes} } ) {
+            print $out "        - to: ",  $rr->{network}, "\n";
+            print $out "          via: ", $rr->{gw},      "\n";
+        }
+    }
+    print "\n";
+    close($out);
+
+    system( "cat", $tmpfile );
+    &mysystem( "scp", "-p", $tmpfile, "root\@$host:$fname");
+    &mysystem( "ssh", "root\@$host", "chown", "root:root", $fname);
+    unlink($tmpfile);
+}
+
+
+print "\n\nDone.\n";
