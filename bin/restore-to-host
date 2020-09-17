@@ -274,6 +274,11 @@ sub dump_plan {
         return;
     }
 
+	if ( $iface =~ /:/ ) {
+		print "******* WARNING ******** Need manual config for alias interface $iface\n";
+		return;
+	}
+
     my $fname   = "/etc/netplan/99-extra-${iface}.yaml";
     my $tmpfile = "/tmp/np-$$-${host}-${iface}.yaml";
 
