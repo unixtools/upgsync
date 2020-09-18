@@ -129,21 +129,30 @@ while ( my $file = readdir($cron) ) {
 # If we had apache, update the setup
 if ( -e "$base/local/apache" ) {
     print "Setting up apache.\n";
-    &mysystem( "ssh", "root\@$host", "git -C /local/apache pull'");
+
+    if ( glob("$base/local/apache-root*/mellon") ) {
+        &mysystem( "ssh", "root\@$host", "apt-get -y install libapache2-mod-auth-mellon" );
+    }
+
+    &mysystem( "ssh", "root\@$host", "git -C /local/apache pull'" );
     &mysystem( "ssh", "root\@$host", "/local/apache/setup-local-dirs" );
+
+    if ( glob("$base/local/apache-root*/*cgiwrap*") ) {
+        &mysystem( "ssh", "root\@$host", "/local/apache/build-all-cgiwrap" );
+    }
 }
 
 # If we had memcache, update the setup
 if ( -e "$base/local/memcache" ) {
     print "Setting up memcached.\n";
-    &mysystem( "ssh", "root\@$host", "git -C /local/memcache pull'");
+    &mysystem( "ssh", "root\@$host", "git -C /local/memcache pull'" );
     &mysystem( "ssh", "root\@$host", "/local/memcache/setup-local-dirs" );
 }
 
 # If we had jdk, update the setup
 if ( -e "$base/local/jdk" ) {
     print "Setting up JDK.\n";
-    &mysystem( "ssh", "root\@$host", "git -C /local/jdk pull'");
+    &mysystem( "ssh", "root\@$host", "git -C /local/jdk pull'" );
     &mysystem( "ssh", "root\@$host", "/local/jdk/setup-local-dirs", "7-64" );
 }
 
@@ -207,7 +216,7 @@ if ( $data =~ m|^/|sgmo ) {
 
 # If we had mysql, update the setup
 if ( -e "$base/local/mysql" ) {
-    &mysystem( "ssh", "root\@$host", "git -C /local/mysql pull");
+    &mysystem( "ssh", "root\@$host", "git -C /local/mysql pull" );
     if ( -e "$base/local/mysql/cluster" ) {
         print "MySQL is a cluster deployment, not auto-upgrading, run setup and upgrade manually.\n";
     }
@@ -278,10 +287,10 @@ sub dump_plan {
         return;
     }
 
-	if ( $iface =~ /:/ ) {
-		print "******* WARNING ******** Need manual config for alias interface $iface\n";
-		return;
-	}
+    if ( $iface =~ /:/ ) {
+        print "******* WARNING ******** Need manual config for alias interface $iface\n";
+        return;
+    }
 
     my $fname   = "/etc/netplan/99-extra-${iface}.yaml";
     my $tmpfile = "/tmp/np-$$-${host}-${iface}.yaml";
@@ -314,10 +323,9 @@ sub dump_plan {
     close($out);
 
     system( "cat", $tmpfile );
-    &mysystem( "scp", "-p", $tmpfile, "root\@$host:$fname");
-    &mysystem( "ssh", "root\@$host", "chown", "root:root", $fname);
+    &mysystem( "scp", "-p", $tmpfile, "root\@$host:$fname" );
+    &mysystem( "ssh", "root\@$host", "chown", "root:root", $fname );
     unlink($tmpfile);
 }
-
 
 print "\n\nDone.\n";
